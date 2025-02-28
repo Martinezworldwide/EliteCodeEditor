@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Language Code Editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.41.0/min/vs/loader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.5.0/axios.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: white;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        #editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        #editor {
+            height: 70vh;
+            border-bottom: 2px solid #333;
+        }
+        #controls {
+            display: flex;
+            padding: 10px;
+            background-color: #252526;
+        }
+        select, button {
+            margin-right: 10px;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #007acc;
+            color: white;
+            cursor: pointer;
+        }
+        #output {
+            height: 30vh;
+            background: black;
+            color: lime;
+            padding: 10px;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <select id="language">
+            <option value="54">C++</option>
+            <option value="50">C</option>
+            <option value="51">C#</option>
+            <option value="62">Java</option>
+            <option value="71">Python</option>
+        </select>
+        <button onclick="runCode()">Run</button>
+    </div>
+    <div id="editor-container">
+        <div id="editor"></div>
+    </div>
+    <div id="output">Output will appear here...</div>
+    
+    <script>
+        let editor;
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.41.0/min/vs' }});
+        require(["vs/editor/editor.main"], function () {
+            editor = monaco.editor.create(document.getElementById('editor'), {
+                value: "// Write your code here...",
+                language: "cpp",
+                theme: "vs-dark"
+            });
+        });
+
+        function runCode() {
+            const code = editor.getValue();
+            const languageId = document.getElementById("language").value;
+            
+            document.getElementById("output").innerText = "Running...";
+            
+            axios.post("https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=false", {
+                source_code: code,
+                language_id: languageId,
+                stdin: "",
+            }, {
+                headers: {
+                    "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
+                    "X-RapidAPI-Key": "6264585815mshaaa60564d4d3dd2ap132e53jsn11ef0791b6f8", // Replace with your API key
+                    "Content-Type": "application/json"
+                }
+            }).then(response => {
+                const token = response.data.token;
+                setTimeout(() => fetchOutput(token), 3000); // Delay to allow execution
+            }).catch(error => {
+                document.getElementById("output").innerText = "Error: " + error;
+            });
+        }
+
+        function fetchOutput(token) {
+            axios.get(`https://judge0-ce.p.rapidapi.com/submissions/${token}`, {
+                headers: {
+                    "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
+                    "X-RapidAPI-Key": "6264585815mshaaa60564d4d3dd2ap132e53jsn11ef0791b6f8" // Replace with your API key
+                }
+            }).then(response => {
+                document.getElementById("output").innerText = response.data.stdout || response.data.stderr || "No output";
+            }).catch(error => {
+                document.getElementById("output").innerText = "Error fetching output: " + error;
+            });
+        }
+    </script>
+</body>
+</html>
